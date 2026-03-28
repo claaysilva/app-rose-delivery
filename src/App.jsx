@@ -316,12 +316,6 @@ body {
   padding: 12px 12px 110px;
 }
 
-.section-head h2 {
-  margin: 0;
-  font-size: clamp(26px, 6vw, 36px);
-  font-weight: 900;
-  color: var(--rose-red);
-}
 .section-head p {
   margin: 2px 0 10px;
   color: var(--muted);
@@ -448,6 +442,15 @@ body {
   font-size: 13px;
   font-weight: 900;
   color: var(--rose-red);
+}
+
+.top-type {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8f7278;
+  margin-bottom: 2px;
 }
 
 .top-price {
@@ -921,7 +924,6 @@ export default function App() {
       {tela === "cardapio" && (
         <section className="section">
           <div className="section-head">
-            <h2>{aba === "massas" ? "Massas" : "Pasteis"}</h2>
             <p>Escolha seus favoritos e monte seu pedido com adicionais.</p>
           </div>
 
@@ -948,6 +950,7 @@ export default function App() {
               <article key={`top-${item.id}`} className="top-card">
                 <img src={item.foto} alt={item.nome} />
                 <div className="top-body">
+                  <div className="top-type">{item.tipo === "massa" ? "Macarrao" : "Pastel"}</div>
                   <div className="top-name">{item.nome}</div>
                   <div className="top-price">
                     {item.tipo === "massa"
@@ -962,14 +965,15 @@ export default function App() {
             ))}
           </div>
 
+          <div className="block-title">Monte o seu</div>
           <div className="tabs">
             <button className={`tab ${aba === "massas" ? "active" : ""}`} onClick={() => setAba("massas")}>
               <span className="tab-icon">🍝</span>
-              <span>Massas</span>
+              <span>Macarrao</span>
             </button>
             <button className={`tab ${aba === "pasteis" ? "active" : ""}`} onClick={() => setAba("pasteis")}>
               <span className="tab-icon">🥟</span>
-              <span>Pasteis</span>
+              <span>Pastel</span>
             </button>
           </div>
 
