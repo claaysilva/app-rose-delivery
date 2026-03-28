@@ -1,0 +1,16 @@
+# Dependências instaladas pelo npm — são pesadas e regeneradas com "npm install"
+node_modules
+
+# Pasta gerada pelo "npm run build" — o Vercel gera isso automaticamente
+dist
+
+# Arquivos de ambiente com senhas e chaves secretas
+.env
+.env.local
+.env.production
+
+# Arquivos de sistema do macOS
+.DS_Store
+
+# Logs de erro do Node
+*.log
