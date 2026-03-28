@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const HORARIO_ABERTURA = 11;
 const HORARIO_FECHAMENTO = 22;
