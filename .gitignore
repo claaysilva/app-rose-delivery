@@ -14,3 +14,9 @@ dist
 
 # Logs de erro do Node
 *.log
+
+# Cache local do Vite
+.vite
+
+# Arquivos temporarios de extracao da documentacao
+_tmp_docx_extract
