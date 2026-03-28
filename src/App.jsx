@@ -1,212 +1,49 @@
 import { useEffect, useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
+import {
+  HORARIO_ABERTURA,
+  HORARIO_FECHAMENTO,
+  WHATSAPP_NUMBER,
+} from "./data/menuData";
+import { getCatalogo, salvarCatalogo } from "./services/catalogService";
+import {
+  getMetricasFunil,
+  incrementarCliqueAB,
+  incrementarMetrica,
+} from "./services/analyticsService";
+import {
+  atualizarStatusPedido,
+  gerarRelatorioDiarioPedidos,
+  getHistoricoPedidos,
+  getAlertasSLA,
+  salvarPedidoNoHistorico,
+  STATUS_PEDIDO,
+} from "./services/orderService";
+import {
+  detectarCombo,
+  estaAbertaAgora,
+  formatBRL,
+  formatPrecoMassaCard,
+  gerarMensagemWhatsApp,
+} from "./utils/orderUtils";
 
-const HORARIO_ABERTURA = 11;
-const HORARIO_FECHAMENTO = 22;
-const WHATSAPP_NUMBER = "5538997355426";
-
-const MASSAS = [
-  {
-    id: "bolonhesa",
-    nome: "Bolonhesa",
-    descricao: "Molho vermelho, carne moida, milho e mussarela",
-    emoji: "🍝",
-    precos: { P: 15, G: 25 },
-    foto: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "gourmet",
-    nome: "Gourmet",
-    descricao: "Molho branco, brocolis, bacon e mussarela",
-    emoji: "🧀",
-    precos: { P: 18, G: 28 },
-    foto: "https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "misto",
-    nome: "Misto",
-    descricao: "Bolonhesa e Gourmet no mesmo prato",
-    emoji: "✨",
-    precos: { P: 18, G: 28 },
-    foto: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "da-casa",
-    nome: "Da Casa",
-    descricao: "Molho especial com carne, frango, bacon, calabresa e catupiry",
-    emoji: "🏡",
-    precos: { P: 22, G: 32 },
-    foto: "https://images.unsplash.com/photo-1598866594230-a7c12756260f?w=400&q=80",
-    destaque: true,
-  },
-  {
-    id: "monte-seu-macarrao",
-    nome: "Monte seu Macarrao",
-    descricao: "Escolha os ingredientes e monte do seu jeito",
-    emoji: "🛠️",
-    precos: { P: 14, G: 22 },
-    foto: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80",
-    destaque: false,
-    personalizavel: true,
-  },
-];
-
-const PASTEIS = [
-  {
-    id: "pastel-frango",
-    nome: "Frango",
-    descricao: "Frango temperado e suculento",
-    emoji: "🍗",
-    preco: 10,
-    foto: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "pastel-pizza",
-    nome: "Pizza",
-    descricao: "Queijo, presunto e oregano",
-    emoji: "🍕",
-    preco: 10,
-    foto: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "pastel-carne",
-    nome: "Carne",
-    descricao: "Carne moida bem temperada",
-    emoji: "🥩",
-    preco: 10,
-    foto: "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&q=80",
-    destaque: false,
-  },
-  {
-    id: "pastel-carne-seca",
-    nome: "Carne Seca com Queijo",
-    descricao: "Carne seca desfiada com queijo derretido",
-    emoji: "⭐",
-    preco: 15,
-    foto: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80",
-    destaque: true,
-  },
-  {
-    id: "monte-seu-pastel",
-    nome: "Monte seu Pastel",
-    descricao: "Escolha os ingredientes e monte do seu jeito",
-    emoji: "🛠️",
-    preco: 8,
-    foto: "https://images.unsplash.com/photo-1603073163308-9654c3fb70b5?w=400&q=80",
-    destaque: false,
-    personalizavel: true,
-  },
-];
-
-const INGREDIENTES_MASSA = [
-  { id: "frango", nome: "Frango", preco: 4 },
-  { id: "carne-moida", nome: "Carne moida", preco: 4 },
-  { id: "bacon", nome: "Bacon", preco: 3 },
-  { id: "calabresa", nome: "Calabresa", preco: 3 },
-  { id: "brocolis", nome: "Brocolis", preco: 2 },
-  { id: "milho", nome: "Milho", preco: 2 },
-  { id: "mussarela", nome: "Mussarela", preco: 3 },
-  { id: "catupiry", nome: "Catupiry", preco: 3 },
-];
-
-const INGREDIENTES_PASTEL = [
-  { id: "frango", nome: "Frango", preco: 4 },
-  { id: "carne", nome: "Carne", preco: 4 },
-  { id: "carne-seca", nome: "Carne seca", preco: 5 },
-  { id: "queijo", nome: "Queijo", preco: 3 },
-  { id: "presunto", nome: "Presunto", preco: 3 },
-  { id: "catupiry", nome: "Catupiry", preco: 3 },
-  { id: "vinagrete", nome: "Vinagrete", preco: 1 },
-  { id: "bacon", nome: "Bacon", preco: 3 },
-];
-
-const ADICIONAIS = [
-  { id: "bacon", nome: "Bacon", preco: 3 },
-  { id: "catupiry", nome: "Catupiry", preco: 3 },
-  { id: "queijo", nome: "Queijo", preco: 3 },
-  { id: "vinagrete", nome: "Vinagrete", preco: 0 },
-];
-
-const formatBRL = (valor) =>
-  new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valor);
-
-const formatPrecoMassaCard = (precos) => {
-  const menorPreco = Math.min(precos.P, precos.G);
-  return `A partir de ${formatBRL(menorPreco)}`;
+const STATUS_LABEL = {
+  [STATUS_PEDIDO.NOVO]: "Novo",
+  [STATUS_PEDIDO.PREPARANDO]: "Preparando",
+  [STATUS_PEDIDO.SAIU]: "Saiu",
+  [STATUS_PEDIDO.ENTREGUE]: "Entregue",
+  [STATUS_PEDIDO.CANCELADO]: "Cancelado",
 };
 
-const estaAbertaAgora = () => {
-  const horaAtual = new Date().getHours();
-  return horaAtual >= HORARIO_ABERTURA && horaAtual < HORARIO_FECHAMENTO;
-};
+const STATUS_ORDEM = [
+  STATUS_PEDIDO.NOVO,
+  STATUS_PEDIDO.PREPARANDO,
+  STATUS_PEDIDO.SAIU,
+  STATUS_PEDIDO.ENTREGUE,
+  STATUS_PEDIDO.CANCELADO,
+];
 
-const detectarCombo = (itens) => {
-  const temMassa = itens.some((i) => i.tipo === "massa");
-  const temPastel = itens.some((i) => i.tipo === "pastel");
-  if (!temMassa || !temPastel) {
-    return { ativo: false, desconto: 0, mensagem: "" };
-  }
-  return {
-    ativo: true,
-    desconto: 5,
-    mensagem: "Combo Massa + Pastel ativo: R$ 5,00 de desconto",
-  };
-};
-
-const gerarMensagemWhatsApp = (itens, combo, total, observacao) => {
-  let msg = "Pedido Rose Delivery\n\n";
-
-  const massas = itens.filter((i) => i.tipo === "massa");
-  const pasteis = itens.filter((i) => i.tipo === "pastel");
-
-  if (massas.length) {
-    msg += "Massas:\n";
-    massas.forEach((item) => {
-      msg += `- ${item.qty}x ${item.nome} (${item.tamanho}) - ${formatBRL(item.subtotal)}\n`;
-      if (item.ingredientes?.length) {
-        msg += `  Ingredientes: ${item.ingredientes.join(", ")}\n`;
-      }
-      if (item.adicionais.length) {
-        msg += `  + ${item.adicionais.join(", ")}\n`;
-      }
-    });
-    msg += "\n";
-  }
-
-  if (pasteis.length) {
-    msg += "Pasteis:\n";
-    pasteis.forEach((item) => {
-      msg += `- ${item.qty}x ${item.nome} - ${formatBRL(item.subtotal)}\n`;
-      if (item.ingredientes?.length) {
-        msg += `  Ingredientes: ${item.ingredientes.join(", ")}\n`;
-      }
-      if (item.adicionais.length) {
-        msg += `  + ${item.adicionais.join(", ")}\n`;
-      }
-    });
-    msg += "\n";
-  }
-
-  if (combo.ativo) {
-    msg += `${combo.mensagem}\n\n`;
-  }
-
-  if (observacao.trim()) {
-    msg += `Observacao: ${observacao.trim()}\n\n`;
-  }
-
-  msg += `Total: ${formatBRL(total)}\n`;
-  msg += "Aguardo confirmacao do pedido.";
-
-  return encodeURIComponent(msg);
-};
+const ADMIN_PIN = "1234";
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@500;700;800;900&family=Baloo+2:wght@700;800&display=swap');
@@ -649,6 +486,64 @@ body {
   font-family: inherit;
 }
 
+.checkout-card {
+  margin-top: 10px;
+  border: 1px solid #eadfd5;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.checkout-title {
+  margin: 0 0 8px;
+  color: var(--rose-red);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.checkout-step {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.checkout-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.checkout-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #ad2438;
+  font-weight: 700;
+}
+
+.payment-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pay-btn {
+  min-height: 38px;
+  border: 1px solid #e4d3ca;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--rose-red);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pay-btn.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(120deg, var(--rose-red), var(--rose-red-700));
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -731,6 +626,239 @@ body {
   margin-bottom: 9px;
 }
 
+.operacao-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 10px;
+  padding-bottom: 2px;
+}
+
+.operacao-filter button {
+  border: 1px solid #e2d4ca;
+  background: #fff;
+  color: var(--rose-red);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.operacao-filter .active {
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--rose-red), var(--rose-red-700));
+  color: #fff;
+}
+
+.operacao-card {
+  border: 1px solid #eadfd5;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.operacao-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.operacao-tab {
+  border: 1px solid #e2d4ca;
+  background: #fff;
+  color: var(--rose-red);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.operacao-tab.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(120deg, var(--rose-red), var(--rose-red-700));
+}
+
+.relatorio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: #f2e7e2;
+  color: var(--rose-red);
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.status-actions button {
+  border: 1px solid #e4d3ca;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--rose-red);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+.status-actions button.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(120deg, var(--rose-red), var(--rose-red-700));
+}
+
+.timeline {
+  margin-top: 8px;
+  border-top: 1px dashed #eadfd5;
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.timeline-item {
+  font-size: 12px;
+  color: #64494f;
+}
+
+.alertas-sla {
+  border: 1px solid #e8d5b8;
+  background: linear-gradient(180deg, #fffaf0, #fff3df);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.alertas-sla h3 {
+  margin: 0 0 6px;
+  color: #88570f;
+  font-size: 14px;
+}
+
+.alerta-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.alerta-item .tag {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.alerta-item.proximo {
+  background: #fff2d7;
+  color: #7a5317;
+}
+
+.alerta-item.proximo .tag {
+  background: #ffde9e;
+  color: #6b430c;
+}
+
+.alerta-item.atrasado {
+  background: #ffe4e4;
+  color: #7d1d2a;
+}
+
+.alerta-item.atrasado .tag {
+  background: #ffbcc6;
+  color: #6e0f1f;
+}
+
+.campanha-banner {
+  margin: 4px 0 10px;
+  border: 1px solid #ecd39c;
+  background: linear-gradient(120deg, #fff7df, #fff0c8);
+  color: #5d4610;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cupom-box {
+  margin-top: 8px;
+  border: 1px solid #e8d9cd;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.cupom-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.cupom-info {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #2e6b45;
+  font-weight: 700;
+}
+
+.cupom-erro {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #7d1d2a;
+  font-weight: 700;
+}
+
+.metricas-funil {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #5f474d;
+}
+
+.metrica-item {
+  border: 1px solid #ead7ce;
+  background: #fffdf9;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.relatorio-box {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 140px;
+  border: 1px solid #e4d3ca;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 12px;
+  color: #4a353a;
+  background: #fff;
+}
+
 .nav {
   position: fixed;
   left: 0;
@@ -740,7 +868,7 @@ body {
   background: #fff;
   border-top: 1px solid #e7d8cf;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 .nav button {
   border: 0;
@@ -799,36 +927,109 @@ body {
 export default function App() {
   const [tela, setTela] = useState("cardapio");
   const [aba, setAba] = useState("massas");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [catalogo, setCatalogo] = useState(() => getCatalogo());
   const [carrinho, setCarrinho] = useState([]);
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
+  const [checkoutAberto, setCheckoutAberto] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState(1);
+  const [checkoutErro, setCheckoutErro] = useState("");
   const [historico, setHistorico] = useState([]);
   const [observacao, setObservacao] = useState("");
   const [busca, setBusca] = useState("");
   const [itemAnimado, setItemAnimado] = useState("");
   const [pulseCarrinho, setPulseCarrinho] = useState(false);
+  const [filtroStatusOperacao, setFiltroStatusOperacao] = useState("todos");
+  const [relatorioDiario, setRelatorioDiario] = useState("");
+  const [abaOperacao, setAbaOperacao] = useState("pedidos");
+  const [cupomCodigo, setCupomCodigo] = useState("");
+  const [cupomAplicado, setCupomAplicado] = useState(null);
+  const [cupomErro, setCupomErro] = useState("");
+  const [metricasFunil, setMetricasFunil] = useState(() => getMetricasFunil());
+  const [variacaoAB] = useState(() => (Math.random() < 0.5 ? "A" : "B"));
 
   const [modalItem, setModalItem] = useState(null);
   const [tamanho, setTamanho] = useState("G");
   const [adicionais, setAdicionais] = useState([]);
   const [ingredientes, setIngredientes] = useState([]);
+  const [checkout, setCheckout] = useState({
+    nome: "",
+    telefone: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    complemento: "",
+    referencia: "",
+    pagamento: "Pix",
+  });
 
-  const aberto = estaAbertaAgora();
+  const massasCardapio = catalogo.massas || [];
+  const pasteisCardapio = catalogo.pasteis || [];
+  const ingredientesMassa = catalogo.ingredientesMassa || [];
+  const ingredientesPastel = catalogo.ingredientesPastel || [];
+  const adicionaisCardapio = catalogo.adicionais || [];
+  const maisPedidosIds = catalogo.maisPedidosIds || [];
+  const campanhasAtivas = (catalogo.campanhas || []).filter(
+    (campanha) => campanha.destaque && campanha.ativoNoDia !== false,
+  );
+  const campanhaDestaque = (catalogo.campanhas || []).find((campanha) => campanha.destaque);
+  const cuponsAtivos = (catalogo.cupons || []).filter((cupom) => cupom.ativo);
+
+  const aberto = estaAbertaAgora(HORARIO_ABERTURA, HORARIO_FECHAMENTO);
   const combo = useMemo(() => detectarCombo(carrinho), [carrinho]);
 
   const subtotal = carrinho.reduce((acc, i) => acc + i.subtotal, 0);
-  const total = subtotal - combo.desconto;
+  const totalSemCupom = Math.max(subtotal - combo.desconto, 0);
+  const descontoCupom = useMemo(() => {
+    if (!cupomAplicado) {
+      return 0;
+    }
+
+    const descontoBruto = cupomAplicado.tipo === "percentual"
+      ? (totalSemCupom * cupomAplicado.valor) / 100
+      : cupomAplicado.valor;
+
+    return Math.min(totalSemCupom, Math.max(0, descontoBruto));
+  }, [cupomAplicado, totalSemCupom]);
+  const total = Math.max(totalSemCupom - descontoCupom, 0);
   const totalItens = carrinho.reduce((acc, i) => acc + i.qty, 0);
 
+  const textoCTA = variacaoAB === "A" ? "Pedir agora" : "Quero esse";
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("rose_historico") || "[]";
-      setHistorico(JSON.parse(raw));
-    } catch {
-      setHistorico([]);
+    setMetricasFunil(incrementarMetrica("visualizacoesCardapio"));
+  }, []);
+
+  useEffect(() => {
+    if (carrinho.length === 0) {
+      setCupomAplicado(null);
+      setCupomCodigo("");
+      setCupomErro("");
     }
+  }, [carrinho.length]);
+
+  useEffect(() => {
+    const sincronizarHistorico = () => setHistorico(getHistoricoPedidos());
+
+    sincronizarHistorico();
+
+    const onStorage = (event) => {
+      if (event.key === "rose_historico") {
+        sincronizarHistorico();
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    const intervalId = setInterval(sincronizarHistorico, 2000);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(intervalId);
+    };
   }, []);
 
   const abrirModal = (item, tipo) => {
+    setMetricasFunil(incrementarCliqueAB(variacaoAB));
     setModalItem({ ...item, tipo });
     setTamanho("G");
     setAdicionais([]);
@@ -852,7 +1053,7 @@ export default function App() {
 
     const isMassa = modalItem.tipo === "massa";
     const base = isMassa ? modalItem.precos[tamanho] : modalItem.preco;
-    const ingredientesBase = isMassa ? INGREDIENTES_MASSA : INGREDIENTES_PASTEL;
+    const ingredientesBase = isMassa ? ingredientesMassa : ingredientesPastel;
     const ingredientesSelecionados = modalItem.personalizavel ? ingredientes : [];
     const adicionaisSelecionados = modalItem.personalizavel ? [] : adicionais;
 
@@ -862,7 +1063,7 @@ export default function App() {
     }, 0);
 
     const addAdicionais = adicionaisSelecionados.reduce((acc, nome) => {
-      const item = ADICIONAIS.find((a) => a.nome === nome);
+      const item = adicionaisCardapio.find((a) => a.nome === nome);
       return acc + (item?.preco || 0);
     }, 0);
 
@@ -905,6 +1106,7 @@ export default function App() {
 
     setItemAnimado(modalItem.id);
     setPulseCarrinho(true);
+    setMetricasFunil(incrementarMetrica("adicoesCarrinho"));
     setTimeout(() => setItemAnimado(""), 700);
     setTimeout(() => setPulseCarrinho(false), 650);
     setModalItem(null);
@@ -926,40 +1128,284 @@ export default function App() {
     );
   };
 
+  const validarCheckout = () => {
+    if (checkoutStep === 1) {
+      if (!checkout.nome.trim()) {
+        return "Preencha o campo Nome.";
+      }
+
+      if (!checkout.telefone.trim()) {
+        return "Preencha o campo Telefone.";
+      }
+
+      const telefoneValido = /^\+\d{1,3}\s\(\d{2}\)\s(\d\s\d{4}-\d{4}|\d{4}-\d{4})$/.test(
+        checkout.telefone,
+      );
+      if (!telefoneValido) {
+        return "Telefone invalido. Use +DDI (DDD) X XXXX-XXXX ou +DDI (DDD) XXXX-XXXX.";
+      }
+    }
+
+    if (checkoutStep === 2) {
+      if (!checkout.rua.trim()) {
+        return "Preencha o campo Rua.";
+      }
+
+      if (!checkout.numero.trim()) {
+        return "Preencha o campo Numero.";
+      }
+
+      if (!checkout.bairro.trim()) {
+        return "Preencha o campo Bairro.";
+      }
+    }
+
+    return "";
+  };
+
+  const atualizarCheckout = (campo, valor) => {
+    setCheckout((prev) => ({ ...prev, [campo]: valor }));
+  };
+
+  const atualizarTelefoneCheckout = (valor) => {
+    const somenteDigitos = valor.replace(/\D/g, "");
+
+    if (!somenteDigitos) {
+      atualizarCheckout("telefone", "");
+      return;
+    }
+
+    const localBruto = somenteDigitos.startsWith("55")
+      ? somenteDigitos.slice(2)
+      : somenteDigitos;
+    const local = localBruto.slice(0, 11);
+
+    const ddd = local.slice(0, 2);
+    const numero = local.slice(2, 11);
+
+    let numeroFormatado = "";
+    if (numero.length <= 4) {
+      numeroFormatado = numero;
+    } else if (numero.length <= 8) {
+      numeroFormatado = `${numero.slice(0, 4)}-${numero.slice(4)}`;
+    } else {
+      numeroFormatado = `${numero.slice(0, 1)} ${numero.slice(1, 5)}-${numero.slice(5, 9)}`;
+    }
+
+    let telefoneFormatado = "+55";
+    if (ddd.length > 0) {
+      telefoneFormatado += ` (${ddd}`;
+      if (ddd.length === 2) {
+        telefoneFormatado += ")";
+      }
+    }
+
+    if (numeroFormatado) {
+      telefoneFormatado += ` ${numeroFormatado}`;
+    }
+
+    atualizarCheckout("telefone", telefoneFormatado.trim());
+  };
+
+  const atualizarNumeroCheckout = (valor) => {
+    atualizarCheckout("numero", valor);
+  };
+
+  const avancarCheckout = () => {
+    const erro = validarCheckout();
+    if (erro) {
+      setCheckoutErro(erro);
+      return;
+    }
+    setCheckoutErro("");
+    setCheckoutStep((prev) => Math.min(prev + 1, 3));
+  };
+
+  const voltarCheckout = () => {
+    setCheckoutErro("");
+    setCheckoutStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const iniciarCheckout = () => {
+    setMetricasFunil(incrementarMetrica("inicioCheckout"));
+    setCarrinhoAberto(false);
+    setCheckoutErro("");
+    setCheckoutStep(1);
+    setCheckoutAberto(true);
+  };
+
+  const aplicarCupom = () => {
+    const codigo = cupomCodigo.trim().toUpperCase();
+    if (!codigo) {
+      setCupomErro("Digite um cupom para aplicar.");
+      return;
+    }
+
+    const encontrado = cuponsAtivos.find((cupom) => cupom.codigo.toUpperCase() === codigo);
+    if (!encontrado) {
+      setCupomErro("Cupom invalido ou inativo.");
+      return;
+    }
+
+    setCupomAplicado(encontrado);
+    setCupomErro("");
+  };
+
+  const removerCupom = () => {
+    setCupomAplicado(null);
+    setCupomCodigo("");
+    setCupomErro("");
+  };
+
+  const alternarAcessoAdmin = () => {
+    if (isAdmin) {
+      setIsAdmin(false);
+      if (tela === "operacao") {
+        setTela("cardapio");
+      }
+      return;
+    }
+
+    const senha = window.prompt("Senha admin:", "");
+    if (senha === ADMIN_PIN) {
+      setIsAdmin(true);
+      return;
+    }
+
+    if (senha !== null) {
+      window.alert("Senha invalida.");
+    }
+  };
+
+  const alternarCampanhaNoDia = () => {
+    if (!campanhaDestaque) {
+      return;
+    }
+
+    const proximoCatalogo = {
+      ...catalogo,
+      campanhas: (catalogo.campanhas || []).map((campanha) =>
+        campanha.id === campanhaDestaque.id
+          ? { ...campanha, ativoNoDia: campanha.ativoNoDia === false }
+          : campanha,
+      ),
+    };
+
+    setCatalogo(proximoCatalogo);
+    salvarCatalogo(proximoCatalogo);
+  };
+
+  const mudarStatusPedido = (pedidoId, novoStatus) => {
+    const atualizado = atualizarStatusPedido(pedidoId, novoStatus);
+    setHistorico(atualizado);
+  };
+
   const finalizarPedido = () => {
-    const mensagem = gerarMensagemWhatsApp(carrinho, combo, total, observacao);
+    const mensagem = gerarMensagemWhatsApp(carrinho, combo, total, observacao, checkout);
 
     const novoPedido = {
+      id: `ped-${Date.now()}`,
       data: new Date().toLocaleString("pt-BR"),
       itens: carrinho,
       total,
+      descontoCupom,
+      cupom: cupomAplicado ? cupomAplicado.codigo : null,
       combo: combo.ativo,
+      checkout,
+      status: STATUS_PEDIDO.NOVO,
+      eventos: [
+        {
+          tipo: "criacao",
+          descricao: "Pedido criado",
+          data: new Date().toLocaleString("pt-BR"),
+        },
+      ],
     };
 
-    const atualizado = [novoPedido, ...historico].slice(0, 10);
+    const atualizado = salvarPedidoNoHistorico(novoPedido);
     setHistorico(atualizado);
-    localStorage.setItem("rose_historico", JSON.stringify(atualizado));
+  setMetricasFunil(incrementarMetrica("pedidosFinalizados"));
 
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${mensagem}`, "_blank");
 
     setCarrinho([]);
     setObservacao("");
     setCarrinhoAberto(false);
+    setCheckoutAberto(false);
+    setCheckoutStep(1);
+    setCheckoutErro("");
+    removerCupom();
   };
 
-  const itensDaAbaBase = aba === "massas" ? MASSAS : PASTEIS;
-  const maisPedidos = [
-    { ...MASSAS.find((item) => item.id === "da-casa"), tipo: "massa" },
-    { ...PASTEIS.find((item) => item.id === "pastel-carne-seca"), tipo: "pastel" },
-    { ...MASSAS.find((item) => item.id === "gourmet"), tipo: "massa" },
-    { ...PASTEIS.find((item) => item.id === "pastel-pizza"), tipo: "pastel" },
-  ].filter(Boolean);
+  const itensDaAbaBase = aba === "massas" ? massasCardapio : pasteisCardapio;
+  const maisPedidos = maisPedidosIds
+    .map((ref) => {
+      const base = ref.tipo === "massa" ? massasCardapio : pasteisCardapio;
+      const item = base.find((m) => m.id === ref.id);
+      return item ? { ...item, tipo: ref.tipo } : null;
+    })
+    .filter(Boolean);
   const termoBusca = busca.trim().toLowerCase();
   const itensDaAba = termoBusca
     ? itensDaAbaBase.filter((item) =>
         `${item.nome} ${item.descricao}`.toLowerCase().includes(termoBusca),
       )
     : itensDaAbaBase;
+
+  const pedidosOperacao = historico.filter((pedido) =>
+    filtroStatusOperacao === "todos" ? true : pedido.status === filtroStatusOperacao,
+  );
+  const alertasSLA = useMemo(() => getAlertasSLA(historico), [historico]);
+
+  const gerarRelatorioDiario = () => {
+    const relatorio = gerarRelatorioDiarioPedidos(historico);
+    setRelatorioDiario(relatorio);
+  };
+
+  const baixarRelatorioCSV = () => {
+    if (!relatorioDiario) {
+      return;
+    }
+
+    const csv = relatorioDiario
+      .split("\n")
+      .map((linha) => `"${linha.replace(/"/g, '""')}"`)
+      .join("\n");
+
+    const blob = new Blob([`linha\n${csv}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `relatorio-rose-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const baixarRelatorioPDF = () => {
+    if (!relatorioDiario) {
+      return;
+    }
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const linhas = relatorioDiario.split("\n");
+    let y = 50;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+
+    linhas.forEach((linha) => {
+      if (y > 790) {
+        doc.addPage();
+        y = 50;
+      }
+      doc.text(linha || " ", 40, y);
+      y += 18;
+    });
+
+    doc.save(`relatorio-rose-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   return (
     <>
@@ -977,9 +1423,14 @@ export default function App() {
             <span className="logo-main">ROSE</span>
             <span className="logo-sub">Delivery</span>
           </div>
-          <button className={`btn secondary carrinho-btn ${pulseCarrinho ? "pulse" : ""}`} onClick={() => setCarrinhoAberto(true)}>
-            Carrinho ({totalItens})
-          </button>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn" onClick={alternarAcessoAdmin}>
+              {isAdmin ? "Sair Admin" : "Admin"}
+            </button>
+            <button className={`btn secondary carrinho-btn ${pulseCarrinho ? "pulse" : ""}`} onClick={() => setCarrinhoAberto(true)}>
+              Carrinho ({totalItens})
+            </button>
+          </div>
         </header>
       )}
 
@@ -1011,6 +1462,12 @@ export default function App() {
             <span className="quick-tag">Pedido no WhatsApp</span>
           </div>
 
+          {campanhasAtivas.length > 0 && (
+            <div className="campanha-banner">
+              {campanhasAtivas[0].titulo}: {campanhasAtivas[0].descricao}
+            </div>
+          )}
+
           <div className="search-wrap">
             <input
               className="search-input"
@@ -1035,7 +1492,7 @@ export default function App() {
                       : formatBRL(item.preco)}
                   </div>
                   <button className="btn secondary add-to-cart top-action" onClick={() => abrirModal(item, item.tipo)}>
-                    Pedir agora
+                    {textoCTA}
                   </button>
                 </div>
               </article>
@@ -1070,7 +1527,7 @@ export default function App() {
                         ? formatPrecoMassaCard(item.precos)
                         : formatBRL(item.preco)}
                     </strong>
-                    <button className="btn secondary add-to-cart" onClick={() => abrirModal(item, aba === "massas" ? "massa" : "pastel")}>Pedir</button>
+                    <button className="btn secondary add-to-cart" onClick={() => abrirModal(item, aba === "massas" ? "massa" : "pastel")}>{textoCTA}</button>
                   </div>
                 </div>
               </article>
@@ -1098,10 +1555,152 @@ export default function App() {
                   {item.ingredientes?.length > 0 ? ` | Ingredientes: ${item.ingredientes.join(", ")}` : ""}
                 </div>
               ))}
+              <div>Status: <strong>{STATUS_LABEL[pedido.status] || "Novo"}</strong></div>
               {pedido.combo && <div>Combo aplicado: -{formatBRL(5)}</div>}
               <div><strong>Total: {formatBRL(pedido.total)}</strong></div>
             </div>
           ))}
+        </section>
+      )}
+
+      {tela === "operacao" && isAdmin && (
+        <section className="section">
+          <h2>Operacao</h2>
+
+          <div className="operacao-tabs">
+            <button
+              className={`operacao-tab ${abaOperacao === "pedidos" ? "active" : ""}`}
+              onClick={() => setAbaOperacao("pedidos")}
+            >
+              Pedidos
+            </button>
+            <button
+              className={`operacao-tab ${abaOperacao === "relatorios" ? "active" : ""}`}
+              onClick={() => setAbaOperacao("relatorios")}
+            >
+              Relatorios
+            </button>
+          </div>
+
+          {abaOperacao === "pedidos" && (
+            <>
+              {alertasSLA.length > 0 && (
+                <div className="alertas-sla">
+                  <h3>Alertas de Pedido</h3>
+                  {alertasSLA.slice(0, 5).map((alerta) => {
+                    const prioridade = alerta.minutos >= alerta.limite + 10 ? "atrasado" : "proximo";
+
+                    return (
+                      <div key={alerta.pedidoId} className={`alerta-item ${prioridade}`}>
+                        <span className="tag">{prioridade === "atrasado" ? "Urgente" : "Atencao"}</span>
+                        <span>
+                          Pedido {alerta.pedidoId} ({alerta.cliente}) em {STATUS_LABEL[alerta.status] || alerta.status} ha {alerta.minutos} min
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="operacao-filter">
+                <button
+                  className={filtroStatusOperacao === "todos" ? "active" : ""}
+                  onClick={() => setFiltroStatusOperacao("todos")}
+                >
+                  Todos
+                </button>
+                {STATUS_ORDEM.map((status) => (
+                  <button
+                    key={status}
+                    className={filtroStatusOperacao === status ? "active" : ""}
+                    onClick={() => setFiltroStatusOperacao(status)}
+                  >
+                    {STATUS_LABEL[status]}
+                  </button>
+                ))}
+              </div>
+
+              {pedidosOperacao.length === 0 && <p>Nenhum pedido para este filtro.</p>}
+
+              {pedidosOperacao.map((pedido) => (
+                <article key={pedido.id} className="operacao-card">
+                  <div className="row">
+                    <strong>{pedido.checkout?.nome || "Cliente"}</strong>
+                    <span className="status-chip">{STATUS_LABEL[pedido.status] || "Novo"}</span>
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#6f565d" }}>
+                    {pedido.checkout?.rua ? `${pedido.checkout.rua}, ${pedido.checkout.numero || "s/n"}` : "Endereco nao informado"}
+                    {pedido.checkout?.bairro ? ` - ${pedido.checkout.bairro}` : ""}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#6f565d" }}>
+                    {pedido.data} • Total: {formatBRL(pedido.total || 0)}
+                  </div>
+
+                  <div className="status-actions">
+                    {STATUS_ORDEM.map((status) => (
+                      <button
+                        key={`${pedido.id}-${status}`}
+                        className={pedido.status === status ? "active" : ""}
+                        onClick={() => mudarStatusPedido(pedido.id, status)}
+                      >
+                        {STATUS_LABEL[status]}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="timeline">
+                    {(pedido.eventos || []).slice(0, 5).map((evento, idx) => (
+                      <div key={`${pedido.id}-evento-${idx}`} className="timeline-item">
+                        {evento.data} - {evento.descricao}
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </>
+          )}
+
+          {abaOperacao === "relatorios" && (
+            <div className="operacao-card">
+              <div className="row">
+                <strong>Relatorio diario</strong>
+                <button className="btn secondary" onClick={gerarRelatorioDiario}>Gerar</button>
+              </div>
+              {campanhaDestaque && (
+                <div className="row" style={{ marginTop: 10 }}>
+                  <span>
+                    Campanha do dia: <strong>{campanhaDestaque.titulo}</strong>
+                  </span>
+                  <button className="btn" onClick={alternarCampanhaNoDia}>
+                    {campanhaDestaque.ativoNoDia === false ? "Ativar hoje" : "Desativar hoje"}
+                  </button>
+                </div>
+              )}
+              <div className="metricas-funil">
+                <div className="metrica-item">Visualizacoes cardapio: {metricasFunil.visualizacoesCardapio || 0}</div>
+                <div className="metrica-item">Adicoes ao carrinho: {metricasFunil.adicoesCarrinho || 0}</div>
+                <div className="metrica-item">Inicio de checkout: {metricasFunil.inicioCheckout || 0}</div>
+                <div className="metrica-item">Pedidos finalizados: {metricasFunil.pedidosFinalizados || 0}</div>
+                <div className="metrica-item">
+                  Cliques CTA A/B: A {metricasFunil.variacaoAB?.A?.cliquesCTA || 0} | B {metricasFunil.variacaoAB?.B?.cliquesCTA || 0}
+                </div>
+              </div>
+              {relatorioDiario ? (
+                <>
+                  <textarea className="relatorio-box" readOnly value={relatorioDiario} />
+                  <div className="relatorio-actions">
+                    <button className="btn" onClick={() => setRelatorioDiario("")}>Fechar</button>
+                    <button className="btn" onClick={baixarRelatorioCSV}>Baixar CSV</button>
+                    <button className="btn secondary" onClick={baixarRelatorioPDF}>Baixar PDF</button>
+                  </div>
+                </>
+              ) : (
+                <p style={{ marginTop: 8, fontSize: 12, color: "#70565c" }}>
+                  Clique em Gerar para criar o resumo diario automatico.
+                </p>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -1131,7 +1730,7 @@ export default function App() {
               <>
                 <div className="section-label">Ingredientes</div>
                 <div className="pills">
-                  {(modalItem.tipo === "massa" ? INGREDIENTES_MASSA : INGREDIENTES_PASTEL).map((a) => (
+                  {(modalItem.tipo === "massa" ? ingredientesMassa : ingredientesPastel).map((a) => (
                     <button
                       key={a.id}
                       className={`pill ${ingredientes.includes(a.nome) ? "active" : ""}`}
@@ -1146,7 +1745,7 @@ export default function App() {
               <>
                 <div className="section-label">Adicionais</div>
                 <div className="pills">
-                  {ADICIONAIS.map((a) => (
+                  {adicionaisCardapio.map((a) => (
                     <button
                       key={a.id}
                       className={`pill ${adicionais.includes(a.nome) ? "active" : ""}`}
@@ -1219,16 +1818,148 @@ export default function App() {
                     <strong>-{formatBRL(combo.desconto)}</strong>
                   </div>
                 )}
+                <div className="cupom-box">
+                  {!cupomAplicado ? (
+                    <>
+                      <div className="cupom-row">
+                        <input
+                          className="field"
+                          placeholder="Cupom de desconto"
+                          value={cupomCodigo}
+                          onChange={(e) => setCupomCodigo(e.target.value.toUpperCase())}
+                        />
+                        <button className="btn" onClick={aplicarCupom}>Aplicar</button>
+                      </div>
+                      {cupomErro && <div className="cupom-erro">{cupomErro}</div>}
+                    </>
+                  ) : (
+                    <div className="row">
+                      <div className="cupom-info">Cupom {cupomAplicado.codigo} aplicado</div>
+                      <button className="btn" onClick={removerCupom}>Remover</button>
+                    </div>
+                  )}
+                </div>
+                {descontoCupom > 0 && (
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <span>Desconto cupom</span>
+                    <strong>-{formatBRL(descontoCupom)}</strong>
+                  </div>
+                )}
                 <div className="row" style={{ margin: "8px 0 10px" }}>
                   <span>Total</span>
                   <strong>{formatBRL(total)}</strong>
                 </div>
 
-                <button className="btn primary" disabled={!aberto} onClick={finalizarPedido} style={{ width: "100%" }}>
-                  {aberto ? "Enviar no WhatsApp" : "Loja fechada"}
+                <button className="btn primary" disabled={!aberto} onClick={iniciarCheckout} style={{ width: "100%" }}>
+                  {aberto ? "Ir para checkout" : "Loja fechada"}
                 </button>
               </div>
             )}
+          </aside>
+        </>
+      )}
+
+      {checkoutAberto && (
+        <>
+          <div className="drawer-backdrop" onClick={() => setCheckoutAberto(false)} />
+          <aside className="drawer">
+            <div className="drawer-head">
+              <strong>Checkout</strong>
+              <button className="btn" onClick={() => setCheckoutAberto(false)}>Fechar</button>
+            </div>
+
+            <div className="drawer-body">
+              <div className="checkout-card">
+                <h3 className="checkout-title">Finalizar pedido</h3>
+                <p className="checkout-step">Etapa {checkoutStep} de 3</p>
+
+                {checkoutStep === 1 && (
+                  <div className="checkout-grid">
+                    <input className="field" placeholder="Nome" value={checkout.nome} onChange={(e) => atualizarCheckout("nome", e.target.value)} />
+                    <input
+                      className="field"
+                      placeholder="+55 (11) 9 9999-9999"
+                      value={checkout.telefone}
+                      inputMode="tel"
+                      onChange={(e) => atualizarTelefoneCheckout(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {checkoutStep === 2 && (
+                  <div className="checkout-grid">
+                    <input className="field" placeholder="Rua" value={checkout.rua} onChange={(e) => atualizarCheckout("rua", e.target.value)} />
+                    <input
+                      className="field"
+                      placeholder="Numero (ou s/n)"
+                      value={checkout.numero}
+                      inputMode="text"
+                      onChange={(e) => atualizarNumeroCheckout(e.target.value)}
+                    />
+                    <input className="field" placeholder="Bairro" value={checkout.bairro} onChange={(e) => atualizarCheckout("bairro", e.target.value)} />
+                    <input className="field" placeholder="Complemento (opcional)" value={checkout.complemento} onChange={(e) => atualizarCheckout("complemento", e.target.value)} />
+                    <input className="field" placeholder="Referencia (opcional)" value={checkout.referencia} onChange={(e) => atualizarCheckout("referencia", e.target.value)} />
+                  </div>
+                )}
+
+                {checkoutStep === 3 && (
+                  <div className="checkout-grid">
+                    <div className="section-label">Forma de pagamento</div>
+                    <div className="payment-group">
+                      {["Pix", "Dinheiro", "Cartao"].map((modo) => (
+                        <button
+                          key={modo}
+                          className={`pay-btn ${checkout.pagamento === modo ? "active" : ""}`}
+                          onClick={() => atualizarCheckout("pagamento", modo)}
+                        >
+                          {modo}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <span>Subtotal</span>
+                      <strong>{formatBRL(subtotal)}</strong>
+                    </div>
+                    {combo.ativo && (
+                      <div className="row">
+                        <span>Combo</span>
+                        <strong>-{formatBRL(combo.desconto)}</strong>
+                      </div>
+                    )}
+                    {descontoCupom > 0 && (
+                      <div className="row">
+                        <span>Cupom {cupomAplicado?.codigo || ""}</span>
+                        <strong>-{formatBRL(descontoCupom)}</strong>
+                      </div>
+                    )}
+                    <div className="row">
+                      <span>Total</span>
+                      <strong>{formatBRL(total)}</strong>
+                    </div>
+                  </div>
+                )}
+
+                {checkoutErro && <div className="checkout-error">{checkoutErro}</div>}
+              </div>
+            </div>
+
+            <div className="drawer-foot">
+              <div className="row">
+                {checkoutStep > 1 ? (
+                  <button className="btn" onClick={voltarCheckout}>Voltar</button>
+                ) : (
+                  <button className="btn" onClick={() => setCheckoutAberto(false)}>Cancelar</button>
+                )}
+
+                {checkoutStep < 3 ? (
+                  <button className="btn secondary" onClick={avancarCheckout}>Continuar</button>
+                ) : (
+                  <button className="btn primary" disabled={!aberto} onClick={finalizarPedido}>
+                    {aberto ? "Enviar no WhatsApp" : "Loja fechada"}
+                  </button>
+                )}
+              </div>
+            </div>
           </aside>
         </>
       )}
@@ -1238,6 +1969,11 @@ export default function App() {
           <button className={tela === "cardapio" ? "active" : ""} onClick={() => setTela("cardapio")}>Cardapio</button>
           <button onClick={() => setCarrinhoAberto(true)}>Carrinho ({totalItens})</button>
           <button className={tela === "historico" ? "active" : ""} onClick={() => setTela("historico")}>Historico</button>
+          {isAdmin ? (
+            <button className={tela === "operacao" ? "active" : ""} onClick={() => setTela("operacao")}>Operacao</button>
+          ) : (
+            <button disabled style={{ opacity: 0.35, cursor: "not-allowed" }}>Operacao</button>
+          )}
         </nav>
       )}
     </>
