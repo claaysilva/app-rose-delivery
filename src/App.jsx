@@ -156,50 +156,469 @@ const gerarMensagemWhatsApp = (itens, combo, total, observacao) => {
 };
 
 const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Bree+Serif&family=Manrope:wght@500;700;800&display=swap');
+
 * { box-sizing: border-box; }
-body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f4efe3; color: #2c1810; }
-.status { position: sticky; top: 0; z-index: 20; text-align: center; padding: 10px; color: #fff; font-weight: 700; }
-.status.open { background: #2b7a3d; }
-.status.closed { background: #6b1e2a; }
-.header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #eadfc8; position: sticky; top: 40px; z-index: 10; }
-.logo { font-weight: 900; color: #6b1e2a; }
-.hero { min-height: 72vh; display: grid; place-items: center; text-align: center; padding: 24px; background: linear-gradient(160deg, #6b1e2a, #8b2d3a); color: #fff; }
-.hero h1 { font-size: clamp(34px, 8vw, 60px); margin: 0 0 8px; }
-.hero p { max-width: 560px; margin: 0 auto 18px; }
-.btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
-.btn.primary { background: #b8963e; color: #2c1810; }
-.btn.secondary { background: #6b1e2a; color: #fff; }
-.section { padding: 16px; max-width: 980px; margin: 0 auto; }
-.tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.tab { flex: 1; border: 1px solid #d7c9a8; background: #fff; border-radius: 8px; padding: 10px; cursor: pointer; font-weight: 700; }
-.tab.active { background: #6b1e2a; color: #fff; }
-.combo { background: #f0d998; color: #2c1810; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-weight: 700; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #eee1c3; }
-.card img { width: 100%; height: 150px; object-fit: cover; }
-.card-body { padding: 12px; }
-.card h3 { margin: 0 0 6px; font-size: 18px; }
-.card p { margin: 0 0 10px; color: #6b5b52; font-size: 13px; min-height: 32px; }
+:root {
+  --brand-wine: #7a2f3c;
+  --brand-wine-dark: #5a1f2b;
+  --brand-gold: #c79f18;
+  --paper: #f5f2eb;
+  --paper-2: #fcfbf8;
+  --ink: #2f1f23;
+  --muted: #7d6268;
+  --ok: #1d7a4d;
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%, #fffdf9 0%, transparent 45%),
+    radial-gradient(circle at 90% 100%, #efe6d2 0%, transparent 40%),
+    var(--paper);
+}
+
+.status {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fff;
+}
+.status.open { background: linear-gradient(120deg, #2f8a58, var(--ok)); }
+.status.closed { background: linear-gradient(120deg, var(--brand-wine-dark), var(--brand-wine)); }
+
+.header {
+  position: sticky;
+  top: 36px;
+  z-index: 14;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin: 8px 10px;
+  border: 1px solid rgba(122, 47, 60, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 28px rgba(67, 29, 37, 0.08);
+}
+.logo {
+  display: grid;
+  line-height: 1;
+}
+.logo-main {
+  font-family: "Bree Serif", serif;
+  color: var(--brand-wine);
+  font-size: 30px;
+  letter-spacing: 1px;
+}
+.logo-sub {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.hero {
+  min-height: 86vh;
+  position: relative;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(170deg, rgba(122, 47, 60, 0.9), rgba(95, 31, 45, 0.92)),
+    radial-gradient(circle at 15% 10%, rgba(199, 159, 24, 0.2), transparent 40%),
+    url('/brand-menu.png');
+  background-size: cover, auto, cover;
+  background-position: center;
+  background-blend-mode: normal, normal, soft-light;
+  color: #fff;
+}
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border: 1px solid rgba(199, 159, 24, 0.4);
+  border-radius: 26px;
+}
+.hero::before { left: -160px; top: -120px; transform: rotate(22deg); }
+.hero::after { right: -140px; bottom: -130px; transform: rotate(18deg); }
+.hero-card {
+  position: relative;
+  z-index: 2;
+  width: min(760px, 100%);
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  padding: 36px 22px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+  animation: fadeUp 0.6s ease;
+}
+.hero-title {
+  margin: 0;
+  font-family: "Bree Serif", serif;
+  letter-spacing: 1px;
+  line-height: 0.95;
+  font-size: clamp(52px, 12vw, 96px);
+}
+.hero-sub {
+  margin: 2px 0 10px;
+  font-size: clamp(28px, 7vw, 46px);
+  font-weight: 800;
+  color: #fff6de;
+}
+.hero-phone {
+  margin: 0 0 16px;
+  font-size: 18px;
+  color: #fff1d3;
+  font-weight: 700;
+}
+.hero p {
+  max-width: 560px;
+  margin: 0 auto 20px;
+  color: #f7ebd0;
+  font-size: 16px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 11px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn.primary {
+  background: var(--brand-gold);
+  color: #3f2a08;
+  box-shadow: 0 12px 24px rgba(199, 159, 24, 0.35);
+}
+.btn.secondary {
+  background: linear-gradient(120deg, var(--brand-wine), var(--brand-wine-dark));
+  color: #fff;
+}
+
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 18px 14px 110px;
+}
+.section h2 {
+  font-family: "Bree Serif", serif;
+  color: var(--brand-wine);
+  margin: 0;
+  font-size: clamp(30px, 5vw, 42px);
+}
+.section-head {
+  margin-bottom: 14px;
+}
+.section-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  position: sticky;
+  top: 98px;
+  z-index: 12;
+  background: linear-gradient(180deg, var(--paper) 0%, rgba(245, 242, 235, 0.92) 70%, rgba(245, 242, 235, 0));
+  padding: 8px 0 12px;
+}
+.tab {
+  flex: 1;
+  border: 1px solid rgba(122, 47, 60, 0.18);
+  background: var(--paper-2);
+  color: var(--brand-wine);
+  border-radius: 14px;
+  min-height: 52px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.tab.active {
+  background: linear-gradient(120deg, var(--brand-wine), var(--brand-wine-dark));
+  color: #fff;
+  border-color: transparent;
+}
+.tab-icon { font-size: 16px; line-height: 1; }
+
+.combo {
+  background: linear-gradient(120deg, #f2df9f, #eacc6a);
+  color: #3d2a08;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(199, 159, 24, 0.45);
+  font-weight: 800;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+.card {
+  position: relative;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(122, 47, 60, 0.12);
+  box-shadow: 0 14px 30px rgba(90, 31, 43, 0.08);
+  animation: fadeUp 0.45s ease;
+}
+.card.destaque { border: 2px solid var(--brand-gold); }
+.card-badge {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 800;
+  color: #3f2a08;
+  background: var(--brand-gold);
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+.card img { width: 100%; height: 168px; object-fit: cover; }
+.card-body { padding: 13px; }
+.card h3 {
+  margin: 0 0 6px;
+  color: var(--brand-wine);
+  font-size: 22px;
+  font-family: "Bree Serif", serif;
+}
+.card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 42px;
+}
+.price-tag {
+  color: var(--brand-wine-dark);
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 30; }
-.drawer { position: fixed; top: 0; right: 0; width: min(420px, 100%); height: 100%; background: #fff; z-index: 40; display: flex; flex-direction: column; }
-.drawer-head { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 1px solid #eee; }
+
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(25, 8, 12, 0.48); z-index: 30; }
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(430px, 100%);
+  height: 100%;
+  background: #fff;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(122, 47, 60, 0.16);
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(122, 47, 60, 0.12);
+}
+.drawer-head strong {
+  font-family: "Bree Serif", serif;
+  color: var(--brand-wine);
+  font-size: 30px;
+}
 .drawer-body { padding: 12px; overflow: auto; flex: 1; }
-.item { border-bottom: 1px solid #f0f0f0; padding: 10px 0; }
-.qty { display: flex; align-items: center; gap: 8px; }
-.qty button { width: 28px; height: 28px; border-radius: 999px; border: 1px solid #6b1e2a; background: #fff; cursor: pointer; }
-.drawer-foot { padding: 12px; border-top: 1px solid #eee; }
-.field { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; }
-.nav { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); background: #4a1219; }
-.nav button { color: #fff; background: transparent; border: 0; padding: 12px 8px; cursor: pointer; font-weight: 700; }
-.nav .active { background: #6b1e2a; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: grid; place-items: end center; z-index: 50; }
-.modal { width: min(520px, 100%); background: #fff; border-radius: 12px 12px 0 0; padding: 14px; }
+.item { border-bottom: 1px solid #f0e8d7; padding: 10px 0; }
+.qty { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.qty button {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-wine);
+  background: #fff;
+  color: var(--brand-wine);
+  font-weight: 800;
+  cursor: pointer;
+}
+.drawer-foot { padding: 12px; border-top: 1px solid rgba(122, 47, 60, 0.12); }
+
+.field {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(122, 47, 60, 0.2);
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: linear-gradient(120deg, var(--brand-wine-dark), var(--brand-wine));
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.nav button {
+  color: #fff;
+  background: transparent;
+  border: 0;
+  padding: 13px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.nav .active { background: rgba(255, 255, 255, 0.14); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(20, 8, 12, 0.45);
+  display: grid;
+  place-items: end center;
+}
+.modal {
+  width: min(530px, 100%);
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 16px 14px;
+}
+.modal h3 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--brand-wine);
+  font-family: "Bree Serif", serif;
+}
+.modal p { margin: 6px 0 10px; color: var(--muted); }
+
+.section-label {
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.6px;
+}
+
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.size-option {
+  border: 1px solid rgba(122, 47, 60, 0.22);
+  background: #fff;
+  border-radius: 14px;
+  min-height: 74px;
+  padding: 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  color: var(--brand-wine);
+  cursor: pointer;
+}
+
+.size-option strong {
+  font-size: 16px;
+}
+
+.size-option span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.size-option.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(120deg, var(--brand-wine), var(--brand-wine-dark));
+  box-shadow: 0 10px 18px rgba(90, 31, 43, 0.22);
+}
+
+.size-option.active span { color: #f9e4e8; }
+
 .pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-.pill { border: 1px solid #d9cdb2; border-radius: 999px; background: #fff; padding: 8px 10px; cursor: pointer; }
-.pill.active { background: #6b1e2a; color: #fff; }
-.hist { background: #fff; border: 1px solid #eadfc8; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-@media (max-width: 560px) { .header { top: 40px; } }
+.pill {
+  border: 1px solid rgba(122, 47, 60, 0.2);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-wine);
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 42px;
+}
+.pill.active {
+  background: linear-gradient(120deg, var(--brand-wine), var(--brand-wine-dark));
+  color: #fff;
+}
+
+.hist {
+  background: #fff;
+  border: 1px solid rgba(122, 47, 60, 0.16);
+  border-radius: 14px;
+  padding: 13px;
+  margin-bottom: 10px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 740px) {
+  .header { top: 38px; }
+  .hero-card { padding: 30px 16px; }
+  .hero-title { font-size: clamp(42px, 15vw, 74px); }
+  .hero-sub { font-size: clamp(22px, 8vw, 36px); }
+  .tabs { top: 88px; }
+  .tab { font-size: 13px; }
+  .btn { min-height: 44px; }
+  .drawer-head strong { font-size: 26px; }
+  .size-grid { grid-template-columns: 1fr; }
+}
 `;
 
 export default function App() {
@@ -339,7 +758,10 @@ export default function App() {
 
       {tela !== "hero" && (
         <header className="header">
-          <div className="logo">ROSE DELIVERY</div>
+          <div className="logo">
+            <span className="logo-main">ROSE</span>
+            <span className="logo-sub">Delivery</span>
+          </div>
           <button className="btn secondary" onClick={() => setCarrinhoAberto(true)}>
             Carrinho ({totalItens})
           </button>
@@ -348,9 +770,14 @@ export default function App() {
 
       {tela === "hero" && (
         <section className="hero">
-          <div>
-            <h1>Rose Delivery</h1>
-            <p>Sabor de casa, entregue pra voce. Massas e pasteis com pedido direto no WhatsApp.</p>
+          <div className="hero-card">
+            <h1 className="hero-title">ROSE</h1>
+            <div className="hero-sub">Delivery</div>
+            <div className="hero-phone">(38) 99735-5426</div>
+            <p>
+              Massas e pasteis com o sabor da casa, em uma experiencia de pedido rapida,
+              elegante e direta no WhatsApp.
+            </p>
             <button className="btn primary" onClick={() => setTela("cardapio")}>Ver cardapio</button>
           </div>
         </section>
@@ -358,24 +785,34 @@ export default function App() {
 
       {tela === "cardapio" && (
         <section className="section">
-          <h2>Nosso cardapio</h2>
+          <div className="section-head">
+            <h2>{aba === "massas" ? "Massas" : "Pasteis"}</h2>
+            <p>Escolha seus favoritos e monte seu pedido com adicionais.</p>
+          </div>
 
           <div className="tabs">
-            <button className={`tab ${aba === "massas" ? "active" : ""}`} onClick={() => setAba("massas")}>Massas</button>
-            <button className={`tab ${aba === "pasteis" ? "active" : ""}`} onClick={() => setAba("pasteis")}>Pasteis</button>
+            <button className={`tab ${aba === "massas" ? "active" : ""}`} onClick={() => setAba("massas")}>
+              <span className="tab-icon">🍝</span>
+              <span>Massas</span>
+            </button>
+            <button className={`tab ${aba === "pasteis" ? "active" : ""}`} onClick={() => setAba("pasteis")}>
+              <span className="tab-icon">🥟</span>
+              <span>Pasteis</span>
+            </button>
           </div>
 
           {combo.ativo && <div className="combo">{combo.mensagem}</div>}
 
           <div className="grid">
             {itensDaAba.map((item) => (
-              <article key={item.id} className="card">
+              <article key={item.id} className={`card ${item.destaque ? "destaque" : ""}`}>
+                {item.destaque && <span className="card-badge">Destaque</span>}
                 <img src={item.foto} alt={item.nome} />
                 <div className="card-body">
                   <h3>{item.emoji} {item.nome}</h3>
                   <p>{item.descricao}</p>
                   <div className="row">
-                    <strong>
+                    <strong className="price-tag">
                       {aba === "massas"
                         ? `${formatBRL(item.precos.P)} / ${formatBRL(item.precos.G)}`
                         : formatBRL(item.preco)}
@@ -416,15 +853,21 @@ export default function App() {
 
             {modalItem.tipo === "massa" && (
               <>
-                <strong>Tamanho</strong>
-                <div className="pills">
-                  <button className={`pill ${tamanho === "P" ? "active" : ""}`} onClick={() => setTamanho("P")}>P - {formatBRL(modalItem.precos.P)}</button>
-                  <button className={`pill ${tamanho === "G" ? "active" : ""}`} onClick={() => setTamanho("G")}>G - {formatBRL(modalItem.precos.G)}</button>
+                <div className="section-label">Escolha o tamanho</div>
+                <div className="size-grid">
+                  <button className={`size-option ${tamanho === "P" ? "active" : ""}`} onClick={() => setTamanho("P")}>
+                    <strong>Pequeno</strong>
+                    <span>{formatBRL(modalItem.precos.P)}</span>
+                  </button>
+                  <button className={`size-option ${tamanho === "G" ? "active" : ""}`} onClick={() => setTamanho("G")}>
+                    <strong>Grande</strong>
+                    <span>{formatBRL(modalItem.precos.G)}</span>
+                  </button>
                 </div>
               </>
             )}
 
-            <strong>Adicionais</strong>
+            <div className="section-label">Adicionais</div>
             <div className="pills">
               {ADICIONAIS.map((a) => (
                 <button
