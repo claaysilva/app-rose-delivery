@@ -41,6 +41,16 @@ const MASSAS = [
     foto: "https://images.unsplash.com/photo-1598866594230-a7c12756260f?w=400&q=80",
     destaque: true,
   },
+  {
+    id: "monte-seu-macarrao",
+    nome: "Monte seu Macarrao",
+    descricao: "Escolha os ingredientes e monte do seu jeito",
+    emoji: "🛠️",
+    precos: { P: 14, G: 22 },
+    foto: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80",
+    destaque: false,
+    personalizavel: true,
+  },
 ];
 
 const PASTEIS = [
@@ -80,6 +90,38 @@ const PASTEIS = [
     foto: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80",
     destaque: true,
   },
+  {
+    id: "monte-seu-pastel",
+    nome: "Monte seu Pastel",
+    descricao: "Escolha os ingredientes e monte do seu jeito",
+    emoji: "🛠️",
+    preco: 8,
+    foto: "https://images.unsplash.com/photo-1603073163308-9654c3fb70b5?w=400&q=80",
+    destaque: false,
+    personalizavel: true,
+  },
+];
+
+const INGREDIENTES_MASSA = [
+  { id: "frango", nome: "Frango", preco: 4 },
+  { id: "carne-moida", nome: "Carne moida", preco: 4 },
+  { id: "bacon", nome: "Bacon", preco: 3 },
+  { id: "calabresa", nome: "Calabresa", preco: 3 },
+  { id: "brocolis", nome: "Brocolis", preco: 2 },
+  { id: "milho", nome: "Milho", preco: 2 },
+  { id: "mussarela", nome: "Mussarela", preco: 3 },
+  { id: "catupiry", nome: "Catupiry", preco: 3 },
+];
+
+const INGREDIENTES_PASTEL = [
+  { id: "frango", nome: "Frango", preco: 4 },
+  { id: "carne", nome: "Carne", preco: 4 },
+  { id: "carne-seca", nome: "Carne seca", preco: 5 },
+  { id: "queijo", nome: "Queijo", preco: 3 },
+  { id: "presunto", nome: "Presunto", preco: 3 },
+  { id: "catupiry", nome: "Catupiry", preco: 3 },
+  { id: "vinagrete", nome: "Vinagrete", preco: 1 },
+  { id: "bacon", nome: "Bacon", preco: 3 },
 ];
 
 const ADICIONAIS = [
@@ -94,6 +136,11 @@ const formatBRL = (valor) =>
     style: "currency",
     currency: "BRL",
   }).format(valor);
+
+const formatPrecoMassaCard = (precos) => {
+  const menorPreco = Math.min(precos.P, precos.G);
+  return `A partir de ${formatBRL(menorPreco)}`;
+};
 
 const estaAbertaAgora = () => {
   const horaAtual = new Date().getHours();
@@ -123,6 +170,9 @@ const gerarMensagemWhatsApp = (itens, combo, total, observacao) => {
     msg += "Massas:\n";
     massas.forEach((item) => {
       msg += `- ${item.qty}x ${item.nome} (${item.tamanho}) - ${formatBRL(item.subtotal)}\n`;
+      if (item.ingredientes?.length) {
+        msg += `  Ingredientes: ${item.ingredientes.join(", ")}\n`;
+      }
       if (item.adicionais.length) {
         msg += `  + ${item.adicionais.join(", ")}\n`;
       }
@@ -134,6 +184,9 @@ const gerarMensagemWhatsApp = (itens, combo, total, observacao) => {
     msg += "Pasteis:\n";
     pasteis.forEach((item) => {
       msg += `- ${item.qty}x ${item.nome} - ${formatBRL(item.subtotal)}\n`;
+      if (item.ingredientes?.length) {
+        msg += `  Ingredientes: ${item.ingredientes.join(", ")}\n`;
+      }
       if (item.adicionais.length) {
         msg += `  + ${item.adicionais.join(", ")}\n`;
       }
@@ -463,6 +516,9 @@ body {
 .top-action {
   margin-top: 7px;
   width: 100%;
+  background: #f8eee7;
+  color: var(--rose-red);
+  border: 1px solid #e7d0c4;
 }
 
 .combo {
@@ -754,6 +810,7 @@ export default function App() {
   const [modalItem, setModalItem] = useState(null);
   const [tamanho, setTamanho] = useState("G");
   const [adicionais, setAdicionais] = useState([]);
+  const [ingredientes, setIngredientes] = useState([]);
 
   const aberto = estaAbertaAgora();
   const combo = useMemo(() => detectarCombo(carrinho), [carrinho]);
@@ -775,10 +832,17 @@ export default function App() {
     setModalItem({ ...item, tipo });
     setTamanho("G");
     setAdicionais([]);
+    setIngredientes([]);
   };
 
   const alternarAdicional = (nome) => {
     setAdicionais((prev) =>
+      prev.includes(nome) ? prev.filter((x) => x !== nome) : [...prev, nome],
+    );
+  };
+
+  const alternarIngrediente = (nome) => {
+    setIngredientes((prev) =>
       prev.includes(nome) ? prev.filter((x) => x !== nome) : [...prev, nome],
     );
   };
@@ -788,13 +852,25 @@ export default function App() {
 
     const isMassa = modalItem.tipo === "massa";
     const base = isMassa ? modalItem.precos[tamanho] : modalItem.preco;
-    const add = adicionais.reduce((acc, nome) => {
+    const ingredientesBase = isMassa ? INGREDIENTES_MASSA : INGREDIENTES_PASTEL;
+    const ingredientesSelecionados = modalItem.personalizavel ? ingredientes : [];
+    const adicionaisSelecionados = modalItem.personalizavel ? [] : adicionais;
+
+    const addIngredientes = ingredientesSelecionados.reduce((acc, nome) => {
+      const item = ingredientesBase.find((a) => a.nome === nome);
+      return acc + (item?.preco || 0);
+    }, 0);
+
+    const addAdicionais = adicionaisSelecionados.reduce((acc, nome) => {
       const item = ADICIONAIS.find((a) => a.nome === nome);
       return acc + (item?.preco || 0);
     }, 0);
 
-    const precoUnitario = base + add;
-    const chave = `${modalItem.id}-${isMassa ? tamanho : "U"}-${[...adicionais].sort().join(",")}`;
+    const precoUnitario = base + addIngredientes + addAdicionais;
+    const chaveDetalhes = modalItem.personalizavel
+      ? [...ingredientesSelecionados].sort().join(",")
+      : [...adicionaisSelecionados].sort().join(",");
+    const chave = `${modalItem.id}-${isMassa ? tamanho : "U"}-${chaveDetalhes}`;
 
     setCarrinho((prev) => {
       const idx = prev.findIndex((i) => i.chave === chave);
@@ -818,7 +894,8 @@ export default function App() {
           nome: modalItem.nome,
           tipo: modalItem.tipo,
           tamanho: isMassa ? tamanho : null,
-          adicionais: [...adicionais],
+          ingredientes: [...ingredientesSelecionados],
+          adicionais: [...adicionaisSelecionados],
           precoUnitario,
           qty: 1,
           subtotal: precoUnitario,
@@ -954,7 +1031,7 @@ export default function App() {
                   <div className="top-name">{item.nome}</div>
                   <div className="top-price">
                     {item.tipo === "massa"
-                      ? `${formatBRL(item.precos.P)} / ${formatBRL(item.precos.G)}`
+                      ? formatPrecoMassaCard(item.precos)
                       : formatBRL(item.preco)}
                   </div>
                   <button className="btn secondary add-to-cart top-action" onClick={() => abrirModal(item, item.tipo)}>
@@ -990,7 +1067,7 @@ export default function App() {
                   <div className="row">
                     <strong className="price-tag">
                       {aba === "massas"
-                        ? `${formatBRL(item.precos.P)} / ${formatBRL(item.precos.G)}`
+                        ? formatPrecoMassaCard(item.precos)
                         : formatBRL(item.preco)}
                     </strong>
                     <button className="btn secondary add-to-cart" onClick={() => abrirModal(item, aba === "massas" ? "massa" : "pastel")}>Pedir</button>
@@ -1018,6 +1095,7 @@ export default function App() {
               {pedido.itens.map((item) => (
                 <div key={item.chave}>
                   - {item.qty}x {item.nome} {item.tamanho ? `(${item.tamanho})` : ""} - {formatBRL(item.subtotal)}
+                  {item.ingredientes?.length > 0 ? ` | Ingredientes: ${item.ingredientes.join(", ")}` : ""}
                 </div>
               ))}
               {pedido.combo && <div>Combo aplicado: -{formatBRL(5)}</div>}
@@ -1049,18 +1127,37 @@ export default function App() {
               </>
             )}
 
-            <div className="section-label">Adicionais</div>
-            <div className="pills">
-              {ADICIONAIS.map((a) => (
-                <button
-                  key={a.id}
-                  className={`pill ${adicionais.includes(a.nome) ? "active" : ""}`}
-                  onClick={() => alternarAdicional(a.nome)}
-                >
-                  {a.nome} {a.preco ? `(+${formatBRL(a.preco)})` : "(Gratis)"}
-                </button>
-              ))}
-            </div>
+            {modalItem.personalizavel ? (
+              <>
+                <div className="section-label">Ingredientes</div>
+                <div className="pills">
+                  {(modalItem.tipo === "massa" ? INGREDIENTES_MASSA : INGREDIENTES_PASTEL).map((a) => (
+                    <button
+                      key={a.id}
+                      className={`pill ${ingredientes.includes(a.nome) ? "active" : ""}`}
+                      onClick={() => alternarIngrediente(a.nome)}
+                    >
+                      {a.nome} (+{formatBRL(a.preco)})
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="section-label">Adicionais</div>
+                <div className="pills">
+                  {ADICIONAIS.map((a) => (
+                    <button
+                      key={a.id}
+                      className={`pill ${adicionais.includes(a.nome) ? "active" : ""}`}
+                      onClick={() => alternarAdicional(a.nome)}
+                    >
+                      {a.nome} {a.preco ? `(+${formatBRL(a.preco)})` : "(Gratis)"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn" onClick={() => setModalItem(null)}>Cancelar</button>
@@ -1086,6 +1183,7 @@ export default function App() {
                   <div className="row">
                     <div>
                       <strong>{item.nome}</strong> {item.tamanho ? `(${item.tamanho})` : ""}
+                      {item.ingredientes?.length > 0 && <div>Ingredientes: {item.ingredientes.join(", ")}</div>}
                       {item.adicionais.length > 0 && <div>+ {item.adicionais.join(", ")}</div>}
                     </div>
                     <strong>{formatBRL(item.subtotal)}</strong>
