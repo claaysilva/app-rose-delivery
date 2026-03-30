@@ -194,23 +194,29 @@ Status da fase
 
 ## Fase 5 - Escala e Governanca
 
-1. Hardening de seguranca
-- Status: Pendente
-- Teste: Pendente
+Status da fase
+- Status: Em desenvolvimento
+- Testes tecnicos (executados): Build de producao executado e aprovado
 - Aprovacao do cliente: Pendente
-- Check final: [ ]
+- Check final da fase: [ ]
+
+1. Hardening de seguranca
+- Status: Em desenvolvimento
+- Teste: PIN admin via variavel de ambiente (fallback local), limite de tentativas e bloqueio temporario
+- Aprovacao do cliente: Pendente
+- Check interno: Em andamento
 
 2. Revisao de custos e performance
-- Status: Pendente
-- Teste: Pendente
+- Status: Em desenvolvimento
+- Teste: Import dinamico do modulo de PDF (jsPDF) aplicado para reduzir carga inicial do app
 - Aprovacao do cliente: Pendente
-- Check final: [ ]
+- Check interno: Em andamento
 
 3. Rotina de backup, auditoria e governanca
-- Status: Pendente
-- Teste: Pendente
+- Status: Em desenvolvimento
+- Teste: Exportacao de backup JSON e trilha de auditoria no painel de Operacao
 - Aprovacao do cliente: Pendente
-- Check final: [ ]
+- Check interno: Em andamento
 
 ## Fase 6 - Autenticacao e Perfis (futuro)
 

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { jsPDF } from "jspdf";
 import {
   HORARIO_ABERTURA,
   HORARIO_FECHAMENTO,
@@ -11,6 +10,11 @@ import {
   incrementarCliqueAB,
   incrementarMetrica,
 } from "./services/analyticsService";
+import {
+  gerarBackupJSON,
+  getEventosAuditoria,
+  registrarEventoAuditoria,
+} from "./services/governanceService";
 import {
   atualizarStatusPedido,
   gerarRelatorioDiarioPedidos,
@@ -43,7 +47,9 @@ const STATUS_ORDEM = [
   STATUS_PEDIDO.CANCELADO,
 ];
 
-const ADMIN_PIN = "1234";
+const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || "1234";
+const LIMITE_TENTATIVAS_ADMIN = 3;
+const BLOQUEIO_ADMIN_MINUTOS = 5;
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@500;700;800;900&family=Baloo+2:wght@700;800&display=swap');
@@ -67,6 +73,20 @@ body {
   font-family: "Nunito Sans", sans-serif;
   color: var(--text);
   background: linear-gradient(180deg, #fbf8f3 0%, var(--bg) 100%);
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+}
+
+.app-shell {
+  min-height: 100dvh;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
 .status {
@@ -247,13 +267,12 @@ body {
 
 .quick-tags {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
   padding: 2px 0 10px;
   margin-bottom: 8px;
-  scrollbar-width: none;
 }
-.quick-tags::-webkit-scrollbar { display: none; }
 .quick-tag {
   white-space: nowrap;
   padding: 8px 11px;
@@ -277,7 +296,7 @@ body {
   border-radius: 12px;
   padding: 10px 38px 10px 12px;
   background: #fff;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
 }
 
@@ -303,18 +322,16 @@ body {
 }
 
 .top-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
-  overflow-x: auto;
+  overflow: visible;
   padding: 0 0 10px;
-  scrollbar-width: none;
 }
 
-.top-row::-webkit-scrollbar { display: none; }
-
 .top-card {
-  min-width: 204px;
-  max-width: 204px;
+  min-width: 0;
+  max-width: 100%;
   border-radius: 12px;
   overflow: hidden;
   background: #fff;
@@ -483,6 +500,7 @@ body {
   border: 1px solid #e4d3ca;
   background: #fff;
   padding: 9px 10px;
+  font-size: 16px;
   font-family: inherit;
 }
 
@@ -628,8 +646,9 @@ body {
 
 .operacao-filter {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
   margin-bottom: 10px;
   padding-bottom: 2px;
 }
@@ -921,6 +940,7 @@ body {
   .hero-card { padding: 24px 12px; }
   .tabs { top: 82px; }
   .size-grid { grid-template-columns: 1fr; }
+  .top-row { grid-template-columns: 1fr; }
 }
 `;
 
@@ -947,6 +967,9 @@ export default function App() {
   const [cupomErro, setCupomErro] = useState("");
   const [metricasFunil, setMetricasFunil] = useState(() => getMetricasFunil());
   const [variacaoAB] = useState(() => (Math.random() < 0.5 ? "A" : "B"));
+  const [auditoria, setAuditoria] = useState(() => getEventosAuditoria());
+  const [tentativasAdmin, setTentativasAdmin] = useState(0);
+  const [adminBloqueadoAte, setAdminBloqueadoAte] = useState(null);
 
   const [modalItem, setModalItem] = useState(null);
   const [tamanho, setTamanho] = useState("G");
@@ -1259,6 +1282,7 @@ export default function App() {
 
   const alternarAcessoAdmin = () => {
     if (isAdmin) {
+      setAuditoria(registrarEventoAuditoria("admin_logout"));
       setIsAdmin(false);
       if (tela === "operacao") {
         setTela("cardapio");
@@ -1266,13 +1290,37 @@ export default function App() {
       return;
     }
 
+    if (adminBloqueadoAte && Date.now() < adminBloqueadoAte) {
+      const restanteMinutos = Math.ceil((adminBloqueadoAte - Date.now()) / 60000);
+      window.alert(`Acesso admin bloqueado temporariamente. Tente novamente em ${restanteMinutos} min.`);
+      return;
+    }
+
+    if (adminBloqueadoAte && Date.now() >= adminBloqueadoAte) {
+      setAdminBloqueadoAte(null);
+      setTentativasAdmin(0);
+    }
+
     const senha = window.prompt("Senha admin:", "");
     if (senha === ADMIN_PIN) {
       setIsAdmin(true);
+      setTentativasAdmin(0);
+      setAuditoria(registrarEventoAuditoria("admin_login_sucesso"));
       return;
     }
 
     if (senha !== null) {
+      const totalTentativas = tentativasAdmin + 1;
+      setTentativasAdmin(totalTentativas);
+      setAuditoria(registrarEventoAuditoria("admin_login_falha", { tentativa: totalTentativas }));
+
+      if (totalTentativas >= LIMITE_TENTATIVAS_ADMIN) {
+        const bloqueioAte = Date.now() + BLOQUEIO_ADMIN_MINUTOS * 60000;
+        setAdminBloqueadoAte(bloqueioAte);
+        window.alert(`Acesso bloqueado por ${BLOQUEIO_ADMIN_MINUTOS} minutos.`);
+        return;
+      }
+
       window.alert("Senha invalida.");
     }
   };
@@ -1293,11 +1341,18 @@ export default function App() {
 
     setCatalogo(proximoCatalogo);
     salvarCatalogo(proximoCatalogo);
+    setAuditoria(
+      registrarEventoAuditoria("campanha_toggle", {
+        campanhaId: campanhaDestaque.id,
+        ativoNoDia: campanhaDestaque.ativoNoDia === false,
+      }),
+    );
   };
 
   const mudarStatusPedido = (pedidoId, novoStatus) => {
     const atualizado = atualizarStatusPedido(pedidoId, novoStatus);
     setHistorico(atualizado);
+    setAuditoria(registrarEventoAuditoria("pedido_status_alterado", { pedidoId, novoStatus }));
   };
 
   const finalizarPedido = () => {
@@ -1360,6 +1415,28 @@ export default function App() {
   const gerarRelatorioDiario = () => {
     const relatorio = gerarRelatorioDiarioPedidos(historico);
     setRelatorioDiario(relatorio);
+    setAuditoria(registrarEventoAuditoria("relatorio_diario_gerado", { totalPedidos: historico.length }));
+  };
+
+  const baixarBackupSistema = () => {
+    const backup = gerarBackupJSON({
+      catalogo,
+      historico,
+      metricas: metricasFunil,
+      auditoria,
+    });
+
+    const blob = new Blob([backup], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `backup-rose-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setAuditoria(registrarEventoAuditoria("backup_exportado"));
   };
 
   const baixarRelatorioCSV = () => {
@@ -1383,11 +1460,12 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const baixarRelatorioPDF = () => {
+  const baixarRelatorioPDF = async () => {
     if (!relatorioDiario) {
       return;
     }
 
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const linhas = relatorioDiario.split("\n");
     let y = 50;
@@ -1408,7 +1486,7 @@ export default function App() {
   };
 
   return (
-    <>
+    <div className="app-shell">
       <style>{CSS}</style>
 
       <div className={`status ${aberto ? "open" : "closed"}`}>
@@ -1684,6 +1762,20 @@ export default function App() {
                 <div className="metrica-item">
                   Cliques CTA A/B: A {metricasFunil.variacaoAB?.A?.cliquesCTA || 0} | B {metricasFunil.variacaoAB?.B?.cliquesCTA || 0}
                 </div>
+              </div>
+              <div className="row" style={{ marginTop: 10 }}>
+                <strong>Governanca</strong>
+                <button className="btn" onClick={baixarBackupSistema}>Baixar backup JSON</button>
+              </div>
+              <div className="metricas-funil">
+                {(auditoria || []).slice(0, 5).map((evento) => (
+                  <div key={evento.id} className="metrica-item">
+                    {evento.data} - {evento.acao}
+                  </div>
+                ))}
+                {(!auditoria || auditoria.length === 0) && (
+                  <div className="metrica-item">Sem eventos de auditoria registrados.</div>
+                )}
               </div>
               {relatorioDiario ? (
                 <>
@@ -1976,6 +2068,6 @@ export default function App() {
           )}
         </nav>
       )}
-    </>
+    </div>
   );
 }
